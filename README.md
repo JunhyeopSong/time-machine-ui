@@ -18,7 +18,7 @@ Shared design for the time-machine products · 타임머신 제품들이 함께 
 |---|---|
 | `v1/tokens.css` | Colours, glass, radii, spacing, fonts · 색·유리·반경·간격·글꼴 |
 | `v1/base.css` | Layout shell, glass surfaces, era card, settings sheet, toggles, segmented controls, globe controls, time dock, timeline, shortcut chips, pins, event popover |
-| `v1/ui.js` | `TMUI.icon` / `fillIcons` (Lucide icons, ISC), `edgeFade` (fade + soften at scroll edges), `popover`, `segmented` |
+| `v1/ui.js` | `TMUI.icon` / `fillIcons` (Lucide icons, ISC), `edgeFade` (fade + soften at scroll edges), `popover`, `segmented`, `scale.linear` / `scale.shiftedLog`, `timeline` (period bands + hover/drag tooltip + ticks + slider on any scale) — demo: [`demo/timeline.html`](https://junhyeopsong.github.io/time-machine-ui/demo/timeline.html) |
 | `v1/products.json` | Product list for the product switcher · 제품 전환 메뉴 목록 |
 
 ## Versions · 버전
@@ -29,6 +29,7 @@ Shared design for the time-machine products · 타임머신 제품들이 함께 
 
 | Version | Changes |
 |---|---|
+| 1.2.0 | `TMUI.scale` (linear, shifted log) and `TMUI.timeline`; drag tooltip follows the handle |
 | 1.1.0 | `ui.js`: shared icons and behaviour (edge fade, popover, segmented controls) |
 | 1.0.0 | `tokens.css`, `base.css`, `products.json` |
 

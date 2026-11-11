@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline demo · time-machine-ui</title>
+<link rel="stylesheet" href="../v1/tokens.css"><link rel="stylesheet" href="../v1/base.css">
+<style>
+body { overflow: auto; padding: 32px 16px; }
+main { max-width: 880px; margin: 0 auto; display: grid; gap: 22px; }
+h1 { margin: 0; font-size: 20px; } p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+.panel { padding: 14px 16px 12px 8px; border-radius: 30px; display: grid; gap: 4px; }
+.head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 6px 12px; }
+.head b { font-size: 14px; } .head span { font-family: var(--f-data); font-size: 13px; color: var(--ink-2); }
+</style></head>
+<body><main>
+<h1>TMUI.timeline</h1>
+<p>Same component, two scales. Hover a period band for its name; drag the handle on a touch screen for the same tooltip.</p>
+
+<section class="glass panel">
+  <div class="head"><b>linear · 540 Ma → +100 Myr</b><span id="linOut"></span></div>
+  <div class="track" id="linTrack"><div class="strata" id="linStrata"></div>
+    <div class="tltip" id="linTip" hidden role="tooltip"><i></i><b></b><span></span></div>
+    <input type="range" id="linSlider" aria-label="time"></div>
+  <div class="ticks" id="linTicks"></div>
+</section>
+
+<section class="glass panel">
+  <div class="head"><b>shifted log (c = 10 kyr) · 300 ka → today</b><span id="logOut"></span></div>
+  <div class="track" id="logTrack"><div class="strata" id="logStrata"></div>
+    <div class="tltip" id="logTip" hidden role="tooltip"><i></i><b></b><span></span></div>
+    <input type="range" id="logSlider" aria-label="time"></div>
+  <div class="ticks" id="logTicks"></div>
+</section>
+</main>
+<script src="../v1/ui.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function make(p, scale, bands, ticks, fmt, start) {
+  let age = start;
+  const tl = TMUI.timeline({ track: $(p + 'Track'), strata: $(p + 'Strata'), tip: $(p + 'Tip'), ticks: $(p + 'Ticks'),
+    slider: $(p + 'Slider'), scale, getAge: () => age, bands: () => bands, tickList: () => ticks });
+  const out = () => { $(p + 'Out').textContent = fmt(age); };
+  $(p + 'Slider').addEventListener('input', e => { age = tl.scale.slider.age(+e.target.value); out(); });
+  tl.rebuild(); out();
+  return { tl, get age() { return age; } };
+}
+const ICS = [['Cambrian', 538.8, 485.4, '#7FA056'], ['Ordovician', 485.4, 443.8, '#009270'], ['Silurian', 443.8, 419.2, '#B3E1B6'],
+  ['Devonian', 419.2, 358.9, '#CB8C37'], ['Carboniferous', 358.9, 298.9, '#67A599'], ['Permian', 298.9, 251.9, '#F04028'],
+  ['Triassic', 251.9, 201.4, '#812B92'], ['Jurassic', 201.4, 145, '#34B2C9'], ['Cretaceous', 145, 66, '#7FC64E'],
+  ['Paleogene', 66, 23.03, '#FD9A52'], ['Neogene', 23.03, 2.58, '#FFE619'], ['Quaternary', 2.58, 0, '#F9F97F']];
+const lin = make('lin', TMUI.scale.linear(540, -100),
+  ICS.map(([n, a, b, c]) => ({ name: n, from: Math.min(a, 540), to: b, color: c, range: `${a} – ${b} Ma` }))
+    .concat([{ name: 'Future', from: 0, to: -100, fut: true, range: '0 – +100 Myr' }]),
+  [500, 400, 300, 200, 100, 0, -100].map(a => ({ age: a, now: a === 0, label: a === 0 ? 'now' : (a > 0 ? `-${a}` : `+${-a}`) })),
+  a => a >= 0 ? `${a.toFixed(1)} Ma` : `+${(-a).toFixed(1)} Myr`, 0);
+const log = make('log', TMUI.scale.shiftedLog(300, 0, 10),   // ages in kyr
+  [{ name: 'Chibanian (Middle Pleistocene)', from: 300, to: 129, color: '#FFF2C7', range: '774 – 129 ka' },
+   { name: 'Late Pleistocene', from: 129, to: 11.7, color: '#FFF2D3', range: '129 – 11.7 ka' },
+   { name: 'Holocene', from: 11.7, to: 0, color: '#FEEBD2', range: '11.7 ka – today' }],
+  [300, 200, 100, 50, 20, 10, 5, 0].map(a => ({ age: a, now: a === 0, label: a === 0 ? 'now' : `-${a}k` })),
+  a => a >= 1 ? `${a.toFixed(1)} ka` : `${Math.round(a * 1000)} years ago`, 45);
+window.DEMO = { lin, log };
+</script>
+</body></html>

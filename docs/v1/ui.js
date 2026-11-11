@@ -88,5 +88,103 @@
     return bs;
   }
 
-  window.TMUI = { version: '1.1.0', icon, fillIcons, edgeFade, popover, segmented };
+
+  // ---- time scales: map an age (larger = older; negative = future) to a position 0–100 % from the left (oldest) ----
+  //   pct(age)       position in %          age(f)       age at fraction f (0 = oldest, 1 = newest)
+  //   span(a, b)     width in % between two ages (a older than b)
+  //   slider         how the range input is driven: { min, max, step, value(age), age(v) }
+  const scale = {
+    // same arithmetic the continent app always used, so linear timelines stay exact
+    linear(oldest, newest, step = 0.5) {
+      const F = oldest - newest;
+      return { kind: 'linear', oldest, newest,
+        pct: a => (oldest - a) / F * 100, span: (a, b) => (a - b) / F * 100, age: f => oldest - f * F,
+        slider: { min: -oldest, max: -newest, step, value: a => -a, age: v => -v } };
+    },
+    // shifted logarithm x ∝ log(age + c): recent times get more room, smoothly, and the present (0) is included
+    shiftedLog(oldest, newest = 0, c = 10) {
+      const L = a => Math.log(a + c), L0 = L(oldest), D = L0 - L(newest);
+      const pct = a => (L0 - L(a)) / D * 100, age = f => Math.exp(L0 - f * D) - c;
+      return { kind: 'log', oldest, newest, c, pct, span: (a, b) => pct(b) - pct(a), age,
+        slider: { min: 0, max: 1000, step: 'any', value: a => pct(a) * 10, age: v => age(v / 1000) } };
+    },
+  };
+
+  // ---- timeline: period bands with hover/drag tooltip, tick labels, and the range input, on any scale ----
+  // Markup (styles in base.css): .track > .strata + .tltip(i, b, span) + input[type=range]; .ticks next to it.
+  //   o.track, o.strata, o.tip, o.ticks, o.slider   the elements
+  //   o.scale        a TMUI.scale (can be swapped later with setScale)
+  //   o.bands()      → [{ from, to, name, range, color } | { …, fut: true }]   (oldest first, covering the scale)
+  //   o.tickList()   → [{ age, label, now? }]
+  //   o.getAge()     → the current age (for the slider and the drag tooltip)
+  //   o.onRebuild()  called after every rebuild (e.g. to re-place event dots)
+  // Returns { rebuild, setScale, pct, scale, bandAt, hideTip }.
+  function timeline(o) {
+    let sc = o.scale, bands = [], tipBand = null, tipDrag = false;
+    const { track, strata, tip, ticks, slider } = o;
+    const FUT_SWATCH = 'repeating-linear-gradient(135deg,#9aa6c4 0 2px,#3b4560 2px 4px)';
+    const bandAt = a => bands.find(b => a <= b.from && a >= b.to) || (a > 0 ? bands[0] : bands[bands.length - 1]);
+    function showTip(bd, x) {                          // x: px from the track's left edge where the tooltip points
+      if (tipBand !== bd) {
+        bands.forEach(b => b.el.classList.toggle('hov', b === bd)); strata.classList.add('hovering');
+        tip.querySelector('i').style.background = bd.fut ? FUT_SWATCH : bd.color;
+        tip.querySelector('b').textContent = bd.name; tip.querySelector('span').textContent = bd.range;
+        tip.hidden = false; tipBand = bd;
+      }
+      const half = tip.offsetWidth / 2, tw = track.clientWidth;
+      const cx = Math.max(half - 8, Math.min(tw - half + 2, x));        // keep the bubble inside the dock
+      tip.style.left = cx + 'px'; tip.style.setProperty('--ax', (half + x - cx) + 'px');
+    }
+    function hideTip() {
+      if (!tipBand) return;
+      tipBand = null; tip.hidden = true; strata.classList.remove('hovering');
+      bands.forEach(b => b.el.classList.remove('hov'));
+    }
+    function rebuild() {
+      strata.innerHTML = ''; ticks.innerHTML = '';
+      const sl = sc.slider;
+      slider.min = String(sl.min); slider.max = String(sl.max); if (sl.step != null) slider.step = String(sl.step);
+      slider.value = String(sl.value(o.getAge()));
+      bands = o.bands();
+      for (const bd of bands) {
+        const d = document.createElement('div');
+        d.style.width = sc.span(bd.from, bd.to) + '%';
+        if (bd.fut) d.className = 'fut'; else d.style.background = bd.color;
+        strata.appendChild(d); bd.el = d;
+      }
+      for (const tk of o.tickList()) {
+        const x = sc.pct(tk.age), sp = document.createElement('span'); sp.style.left = x + '%';
+        sp.textContent = tk.label;
+        if (tk.now) sp.className = 'now';
+        if (x < 4) sp.style.transform = 'none';                    // edge labels stay inside the bar
+        if (x > 96) sp.style.transform = 'translateX(-100%)';
+        ticks.appendChild(sp);
+      }
+      tipBand = null; tip.hidden = true; strata.classList.remove('hovering');
+      o.onRebuild?.();
+    }
+    track.addEventListener('pointermove', e => {
+      if (e.pointerType !== 'mouse' || e.buttons) return;
+      const r = strata.getBoundingClientRect(), f = (e.clientX - r.left) / r.width;
+      if (f < 0 || f > 1) return hideTip();
+      const bd = bandAt(sc.age(f));
+      showTip(bd, (sc.pct(bd.from) + sc.pct(bd.to)) / 200 * r.width);
+    });
+    track.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideTip(); });
+    function thumbTip() {                               // tooltip over the handle while it is dragged (touch / pen)
+      const tw = track.clientWidth, f = (+slider.value - +slider.min) / (+slider.max - +slider.min);
+      showTip(bandAt(sc.slider.age(+slider.value)), 10 + f * (tw - 20));  // handle travels 10px … width-10px; age from the handle itself
+    }
+    track.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') { hideTip(); return; }
+      tipDrag = true; requestAnimationFrame(thumbTip);
+    });
+    slider.addEventListener('input', () => { if (tipDrag) thumbTip(); });
+    ['pointerup', 'pointercancel'].forEach(k => addEventListener(k, () => { if (tipDrag) { tipDrag = false; hideTip(); } }));
+    const api = { rebuild, hideTip, bandAt, pct: a => sc.pct(a), get scale() { return sc; },
+      setScale(next) { sc = next; rebuild(); } };
+    return api;
+  }
+
+  window.TMUI = { version: '1.2.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline };
 })();
