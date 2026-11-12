@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "id": "continents",
+      "url": "/earth-time-machine/",
+      "icon": "earth",
+      "range": {
+        "from": "540Ma",
+        "to": "-100Ma"
+      },
+      "name": {
+        "ko": "지구 대륙 타임머신",
+        "en": "Continental Time Machine"
+      },
+      "status": "live",
+      "tint": "#2f6fd1",
+      "rangeText": {
+        "ko": "5억 4천만 년 전 → 1억 년 뒤",
+        "en": "540 million years ago → 100 million years ahead"
+      },
+      "desc": {
+        "ko": "대륙 이동과 고지형",
+        "en": "Drifting continents and ancient landscapes"
+      }
+    },
+    {
+      "id": "human",
+      "url": "/human-journey/",
+      "icon": "footprints",
+      "range": {
+        "from": "3300ka",
+        "to": "0"
+      },
+      "name": {
+        "ko": "인류의 여정",
+        "en": "Human Journey"
+      },
+      "status": "live",
+      "tint": "#c0662b",
+      "rangeText": {
+        "ko": "330만 년 전 → 현재",
+        "en": "3.3 million years ago → today"
+      },
+      "desc": {
+        "ko": "인류의 진화와 세계로의 전파",
+        "en": "Human evolution and our spread across the world"
+      },
+      "badge": {
+        "ko": "Beta",
+        "en": "Beta"
+      }
+    }
+  ]
+}

@@ -588,14 +588,14 @@
   }
 
   // ---- product switcher: a glass grid button just left of the settings button, opening a card menu of the
-  // time-machine products (products.json). The current product gets a check; moving to another keeps the language.
+  // time-machine products (products.json). The current product's card says 'You are here'; the others are cards to tap.
   //   o.current   id of this product in products.json
   //   o.lang()    → the current language code
   //   o.before    element the button goes in front of (default #gear)
   //   o.products  optional list instead of fetching products.json
   const SW_TEXT = {
-    ko: { title: '타임머신', open: '다른 타임머신', note: '언어 설정은 그대로 이어집니다' },
-    en: { title: 'Time machines', open: 'Other time machines', note: 'Your language setting carries over' },
+    ko: { title: '타임머신', open: '다른 타임머신', here: '지금 보는 중' },
+    en: { title: 'Time machines', open: 'Other time machines', here: 'You are here' },
   };
   function switcher(o) {
     const before = o.before || document.getElementById('gear');
@@ -622,14 +622,14 @@
         } else a.setAttribute('aria-current', 'page');
         a.innerHTML = `<span class="sw-ico" style="--tint:${p.tint || '#4a6a9a'}">${icon(p.icon, 22)}</span>
           <span class="sw-txt"><b></b><span class="sw-range"></span><span class="sw-desc"></span></span>
-          <span class="sw-go">${icon(cur ? 'check' : 'arrow-right', 18)}</span>`;
+          ${cur ? '<span class="sw-here"></span>' : ''}`;
         a.querySelector('b').textContent = pick(p.name);
-        if (p.badge && !cur) { const bd = document.createElement('i'); bd.className = 'sw-badge'; bd.textContent = pick(p.badge); a.querySelector('b').appendChild(bd); }
+        if (p.badge) { const bd = document.createElement('i'); bd.className = 'sw-badge'; bd.textContent = pick(p.badge); a.querySelector('b').appendChild(bd); }
         a.querySelector('.sw-range').textContent = pick(p.rangeText);
         a.querySelector('.sw-desc').textContent = pick(p.desc);
+        if (cur) a.querySelector('.sw-here').textContent = T.here;   // the product you are in; the others are plain cards to tap
         panel.appendChild(a);
       });
-      const n = document.createElement('div'); n.className = 'sw-note'; n.textContent = T.note; panel.appendChild(n);
     }
     const pop = popover(btn, panel, { onOpen: render });
     if (!list) fetch(BASE + 'products.json').then(r => r.json()).then(j => { list = j.products; render(); }).catch(() => {});
@@ -729,5 +729,5 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.6.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
+  window.TMUI = { version: '1.6.1', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
 })();

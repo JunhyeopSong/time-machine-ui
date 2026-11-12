@@ -29,6 +29,7 @@ Shared design for the time-machine products · 타임머신 제품들이 함께 
 
 | Version | Changes |
 |---|---|
+| 1.6.1 | Switcher: the current product's card says "You are here" instead of a check, no arrows, no language note; Human Journey tagged Beta |
 | 1.6.0 | `TMUI.switcher`: the product switcher — a glass grid button left of the settings button and a card menu from `products.json` (current product checked, language carried over); `.era` narrows to leave room for it; products.json gains tint, range text, description and badge |
 | 1.5.0 | `TMUI.mapView`: whole-world Mollweide map of the globe's textures (surface + optional overlay), with pointer/wheel/pinch navigation, focus and zoom tweens, and screen positions for pins |
 | 1.4.0 | `box-sizing: border-box` and `body { margin: 0 }` for every product; settings sheet: language select with its own chevron and fixed width, segmented controls that keep one line, disabled rows (`.item.off`) |
