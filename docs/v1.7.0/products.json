@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "id": "continents",
+      "url": "/earth-time-machine/",
+      "icon": "earth",
+      "range": {
+        "from": "540Ma",
+        "to": "-100Ma"
+      },
+      "name": {
+        "ko": "지구 대륙 타임머신",
+        "en": "Continental Time Machine",
+        "ja": "大陸タイムマシン",
+        "zh-Hant": "大陸時光機",
+        "es": "Máquina del tiempo continental"
+      },
+      "status": "live",
+      "tint": "#2f6fd1",
+      "rangeText": {
+        "ko": "5억 4천만 년 전 → 1억 년 뒤",
+        "en": "540 million years ago → 100 million years ahead",
+        "ja": "5億4千万年前 → 1億年後",
+        "zh-Hant": "5.4 億年前 → 1 億年後",
+        "es": "Hace 540 millones de años → dentro de 100 millones"
+      },
+      "desc": {
+        "ko": "대륙 이동과 고지형",
+        "en": "Drifting continents and ancient landscapes",
+        "ja": "大陸の移動と古地形",
+        "zh-Hant": "大陸漂移與古地形",
+        "es": "Continentes a la deriva y paisajes antiguos"
+      }
+    },
+    {
+      "id": "human",
+      "url": "/human-journey/",
+      "icon": "footprints",
+      "range": {
+        "from": "3300ka",
+        "to": "0"
+      },
+      "name": {
+        "ko": "인류의 여정",
+        "en": "Human Journey",
+        "ja": "人類の旅",
+        "zh-Hant": "人類的旅程",
+        "es": "El viaje humano"
+      },
+      "status": "live",
+      "tint": "#c0662b",
+      "rangeText": {
+        "ko": "330만 년 전 → 현재",
+        "en": "3.3 million years ago → today",
+        "ja": "330万年前 → 現在",
+        "zh-Hant": "330 萬年前 → 現在",
+        "es": "Hace 3,3 millones de años → hoy"
+      },
+      "desc": {
+        "ko": "인류의 진화와 세계로의 전파",
+        "en": "Human evolution and our spread across the world",
+        "ja": "人類の進化と世界への拡散",
+        "zh-Hant": "人類的演化與向世界擴散",
+        "es": "La evolución humana y nuestra expansión por el mundo"
+      },
+      "badge": {
+        "ko": "Beta",
+        "en": "Beta",
+        "ja": "Beta",
+        "zh-Hant": "Beta",
+        "es": "Beta"
+      }
+    }
+  ]
+}

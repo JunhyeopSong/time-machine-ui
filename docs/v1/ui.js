@@ -732,5 +732,36 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.6.2', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
+  // ---------- map legend: a foldable card just under the era card (environment map style) ----------
+  // o = { anchor: element to sit under (default #era), title(): string, items(): [{ color: 'rgb(..)', label }],
+  //       note(): string ('' for none), key: localStorage key for open/folded, phone: matchMedia string (folded at start) }
+  // Returns { el, update(), show(on), place() }.
+  function legend(o) {
+    const anchor = o.anchor || document.getElementById('era');
+    const el = document.createElement('div'); el.className = 'glass maplegend'; el.hidden = true;
+    el.innerHTML = '<button class="ml-head" aria-expanded="true"><span></span><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="ml-body"></div>';
+    anchor.parentNode.insertBefore(el, anchor.nextSibling);
+    const head = el.firstChild, body = el.lastChild;
+    let open = !matchMedia(o.phone || '(max-width: 640px)').matches;
+    try { const v = o.key && localStorage.getItem(o.key); if (v) open = v === '1'; } catch (_) {}
+    const fold = () => { el.classList.toggle('closed', !open); head.setAttribute('aria-expanded', String(open)); };
+    head.onclick = () => { open = !open; fold(); try { if (o.key) localStorage.setItem(o.key, open ? '1' : '0'); } catch (_) {} };
+    const place = () => {         // same left edge and width as the anchor, 8px below it
+      el.style.setProperty('--ml-top', (anchor.offsetTop + anchor.offsetHeight + 8) + 'px');
+      el.style.setProperty('--ml-left', anchor.offsetLeft + 'px'); el.style.setProperty('--ml-w', anchor.offsetWidth + 'px');
+    };
+    try { new ResizeObserver(place).observe(anchor); } catch (_) {}
+    addEventListener('resize', place);
+    function update() {
+      head.firstChild.textContent = o.title();
+      const note = o.note ? o.note() : '';
+      body.innerHTML = o.items().map(it => `<span><i style="background:${it.color}"></i>${it.label}</span>`).join('') + (note ? `<small>${note}</small>` : '');
+      place();
+    }
+    function show(on) { el.hidden = !on; if (on) update(); }
+    fold();
+    return { el, update, show, place };
+  }
+
+  window.TMUI = { version: '1.7.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher, legend };
 })();

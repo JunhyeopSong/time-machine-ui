@@ -46,6 +46,20 @@ button:focus-visible, select:focus-visible, input:focus-visible + .tr { outline:
 #gear { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 12px); }
 #gear[aria-expanded="true"] { background: rgba(255,255,255,0.18); }
 /* product switcher: the same glass button just left of the settings button, and a card menu under them */
+/* map legend (TMUI.legend): under the era card, same left edge, width and padding; folds to its title */
+.maplegend { position: absolute; box-sizing: border-box; left: var(--ml-left, 16px); top: var(--ml-top, 120px); width: var(--ml-w, 340px);
+  border-radius: var(--r-panel); padding: 8px 14px; }
+.maplegend[hidden] { display: none; }
+.maplegend .ml-head { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; font-size: 10.5px; letter-spacing: .1em;
+  text-transform: uppercase; font-family: var(--f-data); color: var(--ink-3); }
+.maplegend .ml-head:hover { color: var(--ink-2); }
+.maplegend .ml-head svg { transition: transform .2s; }
+.maplegend.closed .ml-head svg { transform: rotate(-90deg); }
+.maplegend .ml-body { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; margin-top: 7px; font-size: 12px; color: var(--ink-2); }
+.maplegend.closed .ml-body { display: none; }
+.maplegend .ml-body span { display: flex; align-items: center; gap: 7px; white-space: nowrap; min-width: 0; }
+.maplegend .ml-body i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.maplegend .ml-body small { grid-column: 1 / -1; font-size: 10.5px; color: var(--ink-3); line-height: 1.4; }
 #switchBtn { position: absolute; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 48px); top: calc(env(safe-area-inset-top, 0px) + 12px); }
 #switchBtn[aria-expanded="true"] { background: rgba(255,255,255,0.18); }
 .switcher { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 20;
@@ -230,6 +244,8 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 0; bord
 .cityTag { position: fixed; left: 0; top: 0; pointer-events: none; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px #000; transform: translate(10px, -50%); white-space: nowrap; }
 
 @media (max-width: 640px) {
+  .maplegend { padding: 8px 12px; }   /* same as the era card on phones */
+  .maplegend .ml-body { font-size: 11.5px; gap: 4px 10px; }
   .tchip { padding-right: 8px; }
   .tchip .tv { font-size: 15px; }
   .step { width: 26px; height: 26px; }

@@ -29,6 +29,7 @@ Shared design for the time-machine products · 타임머신 제품들이 함께 
 
 | Version | Changes |
 |---|---|
+| 1.7.0 | `TMUI.legend`: a foldable map legend under the era card (same left edge and width), for the environment map style in both time machines |
 | 1.6.2 | Switcher texts and product names in 日本語, 繁體中文 and Español |
 | 1.6.1 | Switcher: the current product's card says "You are here" instead of a check, no arrows, no language note; Human Journey tagged Beta |
 | 1.6.0 | `TMUI.switcher`: the product switcher — a glass grid button left of the settings button and a card menu from `products.json` (current product checked, language carried over); `.era` narrows to leave room for it; products.json gains tint, range text, description and badge |
