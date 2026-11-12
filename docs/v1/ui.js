@@ -435,6 +435,157 @@
       halt() { vel = { spin: 0, tilt: 0 }; } };
   }
 
+  // ---- whole-world map: Mollweide (equal-area) view of the same equirectangular textures the globe shows ----
+  // The texture(s) are re-projected in a shader, so everything painted on the globe shows on the map as well.
+  //   o.renderer     the globe's renderer (TMUI.globe().renderer)
+  //   o.textures()   → [surface, overlay?]: THREE textures in the globe's UV layout; the overlay is alpha-blended on top
+  //   o.overGain     overlay opacity multiplier (default 1): the whole world is smaller on the map, so thin strokes fade
+  //   o.frame()      → { top, bottom }: the screen band the map may use (e.g. below the era card, above the time dock)
+  //   o.fx           optional { uniforms, lib, at } to tint the map from the product's own GLSL:
+  //                  lib = GLSL functions, at = expression of vec3 dir giving vec4(rgb premultiplied, a)
+  // Returns { scene, camera, state, layout, step(now), xy(lon, lat), toScreen(lon, lat), llOf(v3), focus(lon, lat, zoom?),
+  //   zoomAt(f, x, y), zoomSmooth(f), home(), attach(stage, { active(), onGrab() }) }. Render with
+  //   step(now); renderer.render(map.scene, map.camera) while the map is shown.
+  function mapView(o) {
+    const D2R = Math.PI / 180, SQ2 = Math.SQRT2, PI = Math.PI;
+    const S = { lon0: 0, zoom: 1, my: 0, cx: 0, cy: 0, cyFit: 0, R: 1, R0: 1, tween: null };
+    const fx = o.fx || { uniforms: {}, lib: '', at: 'vec4(0.0)' };
+    const mat = new THREE.ShaderMaterial({
+      depthTest: false, depthWrite: false, transparent: true,
+      uniforms: Object.assign({}, fx.uniforms, {
+        uMap: { value: null }, uOver: { value: null }, uHasOver: { value: 0 }, uGain: { value: o.overGain ?? 1 },
+        uCen: { value: new THREE.Vector2() }, uRad: { value: 1 }, uLon0: { value: 0 }, uDPR: { value: 1 },
+      }),
+      vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: fx.lib + `
+        uniform sampler2D uMap; uniform sampler2D uOver; uniform float uHasOver; uniform float uGain;
+        uniform vec2 uCen; uniform float uRad; uniform float uLon0; uniform float uDPR;
+        const float PI = 3.14159265;
+        void main() {
+          vec2 q = (gl_FragCoord.xy / uDPR - uCen) / uRad;            // map units: ellipse x²/8 + y²/2 <= 1
+          float e = q.x * q.x / 8.0 + q.y * q.y / 2.0;
+          float px = 1.2 / uRad;                                      // about one screen pixel in map units
+          if (e > 1.0 + px) discard;
+          float th = asin(clamp(q.y / 1.41421356, -1.0, 1.0));
+          float lat = asin(clamp((2.0 * th + sin(2.0 * th)) / PI, -1.0, 1.0));
+          float lon = uLon0 + PI * q.x / (2.0 * 1.41421356 * max(cos(th), 1e-4));
+          lon = mod(lon + PI, 2.0 * PI) - PI;
+          vec2 uv = vec2((lon + PI) / (2.0 * PI), (lat + 0.5 * PI) / PI);
+          vec3 col = texture2D(uMap, uv).rgb;
+          if (uHasOver > 0.5) { vec4 ov = texture2D(uOver, uv); col = mix(col, ov.rgb, min(1.0, ov.a * uGain)); }
+          float phi = lon + PI, cl = cos(lat);
+          vec3 dir = vec3(-cos(phi) * cl, sin(lat), sin(phi) * cl);
+          vec4 f = ${fx.at};
+          col = col * (1.0 - f.a) + f.rgb;
+          float rim = smoothstep(1.0 - 3.0 * px, 1.0, e);               // soft outline at the map edge
+          col = mix(col, vec3(0.75, 0.85, 1.0), 0.55 * rim);
+          gl_FragColor = vec4(col, 1.0 - smoothstep(1.0, 1.0 + px, e));
+        }`,
+    });
+    const scene = new THREE.Scene(), camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+    const wrap180 = x => ((x % 360) + 540) % 360 - 180;
+    function layout() {
+      const W = innerWidth, fr = o.frame ? o.frame() : { top: 70, bottom: innerHeight - 40 };
+      const side = W < 640 ? 12 : 72;                                 // room for the zoom buttons on wide screens
+      S.R0 = Math.max(40, Math.min((W - 2 * side) / (4 * SQ2), (fr.bottom - fr.top) / (2 * SQ2)));
+      S.cyFit = (fr.top + fr.bottom) / 2; S.cx = W / 2;
+      S.R = S.R0 * S.zoom;
+      const lim = SQ2 * Math.max(0, 1 - 1 / S.zoom);
+      S.my = Math.max(-lim, Math.min(lim, S.my));
+      S.cy = S.cyFit + S.my * S.R;
+      const u = mat.uniforms, tx = o.textures();
+      u.uCen.value.set(S.cx, innerHeight - S.cy); u.uRad.value = S.R;
+      u.uLon0.value = S.lon0 * D2R; u.uDPR.value = o.renderer.getPixelRatio();
+      u.uMap.value = tx[0]; u.uOver.value = tx[1] || tx[0]; u.uHasOver.value = tx[1] ? 1 : 0;
+    }
+    function llOf(v) { const r = v.length(); return { lat: Math.asin(Math.max(-1, Math.min(1, v.y / r))) / D2R, lon: wrap180(Math.atan2(v.z, -v.x) / D2R - 180) }; }
+    function theta(lat) {
+      const phi = lat * D2R; if (Math.abs(phi) > PI / 2 - 1e-6) return Math.sign(phi) * PI / 2;
+      let th = phi;
+      for (let i = 0; i < 10; i++) { const d = 2 + 2 * Math.cos(2 * th); if (d < 1e-9) break; const f = 2 * th + Math.sin(2 * th) - PI * Math.sin(phi); th -= f / d; if (Math.abs(f) < 1e-9) break; }
+      return th;
+    }
+    function xy(lon, lat) {         // screen position of a point on the map
+      const th = theta(lat), dl = wrap180(lon - S.lon0) * D2R;
+      return { x: S.cx + 2 * SQ2 / PI * dl * Math.cos(th) * S.R, y: S.cy - SQ2 * Math.sin(th) * S.R };
+    }
+    function toScreen(lon, lat) {   // like xy, but null off screen or right on the cut line (hide rather than jump)
+      const s = xy(lon, lat);
+      if (s.x < -40 || s.x > innerWidth + 40 || s.y < -40 || s.y > innerHeight + 40) return null;
+      return Math.abs(wrap180(lon - S.lon0)) > 176 ? null : s;
+    }
+    function focus(lon, lat, zoom) {
+      S.tween = { l0: S.lon0, dl: wrap180(lon - S.lon0), m0: S.my, z0: S.zoom, z1: zoom ?? Math.max(S.zoom, 1.6), y: SQ2 * Math.sin(theta(lat)), start: performance.now(), dur: 700 };
+    }
+    function step(now) {
+      const tw = S.tween;
+      if (tw) {
+        const k = Math.min(1, (now - tw.start) / tw.dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        S.lon0 = wrap180(tw.l0 + tw.dl * f); S.zoom = tw.z0 + (tw.z1 - tw.z0) * f; S.my = tw.m0 + (tw.y - tw.m0) * f;
+        if (k >= 1) S.tween = null;
+      }
+      layout();
+    }
+    function zoomAt(factor, sx, sy) {
+      S.tween = null;
+      const z1 = Math.max(1, Math.min(8, S.zoom * factor)); if (z1 === S.zoom) return;
+      const xm = (sx - S.cx) / S.R, ym = (S.cy - sy) / S.R, R1 = S.R0 * z1;
+      const ct = Math.sqrt(Math.max(0.05, 1 - ym * ym / 2));          // keep the point under the cursor in place
+      S.lon0 = wrap180(S.lon0 + (xm - xm * S.R / R1) * PI / (2 * SQ2 * ct) / D2R);
+      S.my = (sy - S.cyFit) / R1 + ym;
+      S.zoom = z1; layout();
+    }
+    function zoomSmooth(factor) {   // zoom buttons: ease to the new zoom instead of jumping
+      const tw = S.tween, from = { lon0: S.lon0, zoom: S.zoom, my: S.my };
+      if (tw) { S.lon0 = wrap180(tw.l0 + tw.dl); S.zoom = tw.z1; S.my = tw.y; layout(); }
+      zoomAt(factor, S.cx, S.cy);
+      const to = { lon0: S.lon0, zoom: S.zoom, my: S.my };
+      Object.assign(S, from); layout();
+      if (to.zoom === from.zoom) return;
+      S.tween = { l0: from.lon0, dl: wrap180(to.lon0 - from.lon0), m0: from.my, z0: from.zoom, z1: to.zoom, y: to.my, start: performance.now(), dur: 350 };
+    }
+    function home() { S.tween = { l0: S.lon0, dl: 0, m0: S.my, z0: S.zoom, z1: 1, y: 0, start: performance.now(), dur: 500 }; }
+    // pointer input while the map is shown: drag sideways to turn the centre meridian, up/down to pan, wheel/pinch to zoom
+    function attach(stage, h = {}) {
+      const active = h.active || (() => true), pts = new Map();
+      let last = null, pinch = null;
+      const centroid = () => { let x = 0, y = 0; pts.forEach(p => { x += p.x; y += p.y; }); return { x: x / pts.size, y: y / pts.size }; };
+      const spread = () => { const a = [...pts.values()]; return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); };
+      stage.addEventListener('pointerdown', e => {
+        if (!active()) return; e.stopPropagation();
+        try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        h.onGrab?.(); S.tween = null; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        last = centroid(); pinch = pts.size === 2 ? spread() : null; stage.style.cursor = 'grabbing';
+      }, true);
+      stage.addEventListener('pointermove', e => {
+        if (!active()) return; e.stopPropagation();
+        if (!pts.has(e.pointerId)) return;
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const c = centroid();
+        if (pts.size === 2 && pinch) { const sp = spread(); if (sp > 4) { zoomAt(sp / pinch, c.x, c.y); pinch = sp; } }
+        S.lon0 = wrap180(S.lon0 - (c.x - last.x) / S.R * PI / (2 * SQ2) / D2R);
+        S.my += (c.y - last.y) / S.R; layout();
+        last = c;
+      }, true);
+      const up = e => {
+        if (!active()) return; e.stopPropagation();
+        pts.delete(e.pointerId);
+        if (pts.size) { last = centroid(); pinch = pts.size === 2 ? spread() : null; } else stage.style.cursor = 'grab';
+      };
+      stage.addEventListener('pointerup', up, true); stage.addEventListener('pointercancel', up, true);
+      stage.addEventListener('wheel', e => {
+        if (!active()) return; e.stopPropagation(); e.preventDefault();
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        zoomAt(Math.exp(-Math.max(-1, Math.min(1, dy * 0.0016))), e.clientX, e.clientY);
+      }, { capture: true, passive: false });
+      stage.addEventListener('dblclick', e => { if (active()) { e.stopPropagation(); zoomAt(e.shiftKey ? 0.5 : 2, e.clientX, e.clientY); } }, true);
+    }
+    // open the map centred on the given point (e.g. what the globe was facing)
+    function open(lon) { S.lon0 = wrap180(lon); S.zoom = 1; S.my = 0; S.tween = null; layout(); }
+    return { scene, camera, material: mat, state: S, layout, step, xy, toScreen, llOf, focus, zoomAt, zoomSmooth, home, open, attach };
+  }
+
   // ---- places: nearest city and a rough guess from the time zone (no permission, nothing sent anywhere) ----
   // City objects: { names: { ko, en, … } | name, en?, country, lat, lon }
   const TZ_ALIAS = { 'Asia/Saigon': 'Ho Chi Minh City', 'Asia/Ho_Chi_Minh': 'Ho Chi Minh City', 'Asia/Katmandu': 'Kathmandu',
@@ -527,5 +678,5 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.4.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, geo, citySearch };
+  window.TMUI = { version: '1.5.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch };
 })();
