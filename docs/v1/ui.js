@@ -596,6 +596,9 @@
   const SW_TEXT = {
     ko: { title: '타임머신', open: '다른 타임머신', here: '지금 보는 중' },
     en: { title: 'Time machines', open: 'Other time machines', here: 'You are here' },
+    "ja": {"title": "タイムマシン", "open": "ほかのタイムマシン", "here": "表示中"},
+    "zh-Hant": {"title": "時光機", "open": "其他時光機", "here": "目前所在"},
+    "es": {"title": "Máquinas del tiempo", "open": "Otras máquinas del tiempo", "here": "Estás aquí"},
   };
   function switcher(o) {
     const before = o.before || document.getElementById('gear');
@@ -729,5 +732,5 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.6.1', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
+  window.TMUI = { version: '1.6.2', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
 })();
