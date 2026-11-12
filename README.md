@@ -3,7 +3,7 @@
 Shared design for the time-machine products · 타임머신 제품들이 함께 쓰는 디자인
 
 - [Continental Time Machine · 지구 대륙 타임머신](https://junhyeopsong.github.io/earth-time-machine/) ([repo](https://github.com/JunhyeopSong/earth-time-machine))
-- Human Journey · 인류의 여정 (planned · 준비 중)
+- [Human Journey · 인류의 여정](https://junhyeopsong.github.io/human-journey/) ([repo](https://github.com/JunhyeopSong/human-journey))
 
 ## Use · 사용법
 
@@ -29,6 +29,7 @@ Shared design for the time-machine products · 타임머신 제품들이 함께 
 
 | Version | Changes |
 |---|---|
+| 1.4.0 | `box-sizing: border-box` and `body { margin: 0 }` for every product; settings sheet: language select with its own chevron and fixed width, segmented controls that keep one line, disabled rows (`.item.off`) |
 | 1.3.0 | `TMUI.globe`, `TMUI.geo`, `TMUI.citySearch`; the city list follows the settings panel when it scrolls |
 | 1.2.0 | `TMUI.scale` (linear, shifted log) and `TMUI.timeline`; drag tooltip follows the handle |
 | 1.1.0 | `ui.js`: shared icons and behaviour (edge fade, popover, segmented controls) |

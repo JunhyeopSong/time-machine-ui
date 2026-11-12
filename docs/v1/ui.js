@@ -527,5 +527,5 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.3.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, geo, citySearch };
+  window.TMUI = { version: '1.4.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, geo, citySearch };
 })();
