@@ -3,6 +3,7 @@
    Icons: Lucide (https://lucide.dev), ISC license, from lucide-static 0.460.0. */
 (function () {
   'use strict';
+  const BASE = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '');   // where this ui.js lives (products.json sits beside it)
   const ICONS = {
     'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" />',
     'plus': '<path d="M5 12h14" /><path d="M12 5v14" />',
@@ -586,6 +587,56 @@
     return { scene, camera, material: mat, state: S, layout, step, xy, toScreen, llOf, focus, zoomAt, zoomSmooth, home, open, attach };
   }
 
+  // ---- product switcher: a glass grid button just left of the settings button, opening a card menu of the
+  // time-machine products (products.json). The current product gets a check; moving to another keeps the language.
+  //   o.current   id of this product in products.json
+  //   o.lang()    → the current language code
+  //   o.before    element the button goes in front of (default #gear)
+  //   o.products  optional list instead of fetching products.json
+  const SW_TEXT = {
+    ko: { title: '타임머신', open: '다른 타임머신', note: '언어 설정은 그대로 이어집니다' },
+    en: { title: 'Time machines', open: 'Other time machines', note: 'Your language setting carries over' },
+  };
+  function switcher(o) {
+    const before = o.before || document.getElementById('gear');
+    const btn = document.createElement('button');
+    btn.className = 'glass icon'; btn.id = 'switchBtn'; btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', 'switcher');
+    btn.innerHTML = icon('layout-grid');
+    before.parentNode.insertBefore(btn, before);
+    const panel = document.createElement('div');
+    panel.className = 'glass switcher'; panel.id = 'switcher'; panel.hidden = true; panel.setAttribute('role', 'dialog');
+    before.parentNode.insertBefore(panel, before.nextSibling);
+    let list = o.products || null;
+    const tx = () => SW_TEXT[o.lang()] || SW_TEXT.en;
+    const pick = v => v && (v[o.lang()] ?? v.en ?? '');
+    function render() {
+      const T = tx(); btn.title = T.open; btn.setAttribute('aria-label', T.open); panel.setAttribute('aria-label', T.title);
+      panel.innerHTML = '';
+      const h = document.createElement('div'); h.className = 'sw-title'; h.textContent = T.title; panel.appendChild(h);
+      (list || []).filter(p => p.status !== 'planned').forEach(p => {
+        const cur = p.id === o.current, a = document.createElement(cur ? 'div' : 'a');
+        a.className = 'sw-card' + (cur ? ' cur' : '');
+        if (!cur) {
+          a.href = p.url;
+          a.onclick = () => { try { localStorage.setItem('tm.lang', o.lang()); localStorage.setItem('lang', o.lang()); } catch (_) {} };
+        } else a.setAttribute('aria-current', 'page');
+        a.innerHTML = `<span class="sw-ico" style="--tint:${p.tint || '#4a6a9a'}">${icon(p.icon, 22)}</span>
+          <span class="sw-txt"><b></b><span class="sw-range"></span><span class="sw-desc"></span></span>
+          <span class="sw-go">${icon(cur ? 'check' : 'arrow-right', 18)}</span>`;
+        a.querySelector('b').textContent = pick(p.name);
+        if (p.badge && !cur) { const bd = document.createElement('i'); bd.className = 'sw-badge'; bd.textContent = pick(p.badge); a.querySelector('b').appendChild(bd); }
+        a.querySelector('.sw-range').textContent = pick(p.rangeText);
+        a.querySelector('.sw-desc').textContent = pick(p.desc);
+        panel.appendChild(a);
+      });
+      const n = document.createElement('div'); n.className = 'sw-note'; n.textContent = T.note; panel.appendChild(n);
+    }
+    const pop = popover(btn, panel, { onOpen: render });
+    if (!list) fetch(BASE + 'products.json').then(r => r.json()).then(j => { list = j.products; render(); }).catch(() => {});
+    render();
+    return { button: btn, panel, render, close: pop.close };
+  }
+
   // ---- places: nearest city and a rough guess from the time zone (no permission, nothing sent anywhere) ----
   // City objects: { names: { ko, en, … } | name, en?, country, lat, lon }
   const TZ_ALIAS = { 'Asia/Saigon': 'Ho Chi Minh City', 'Asia/Ho_Chi_Minh': 'Ho Chi Minh City', 'Asia/Katmandu': 'Kathmandu',
@@ -678,5 +729,5 @@
     return { close, render, place };
   }
 
-  window.TMUI = { version: '1.5.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch };
+  window.TMUI = { version: '1.6.0', icon, fillIcons, edgeFade, popover, segmented, scale, timeline, globe, mapView, geo, citySearch, switcher };
 })();
